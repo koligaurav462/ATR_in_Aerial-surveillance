@@ -1,4 +1,4 @@
-# 🛰️ Automatic Target Recognition in Aerial Surveillance (YOLOv11n)
+# 🛰️ Automatic Target Recognition in Aerial Surveillance (YOLOv8)
 
 ## 📌 Overview
 This project implements an **Automatic Target Recognition (ATR)** system using **YOLOv8** to detect, classify, and localize key objects (e.g., persons, vehicles, equipment) from aerial surveillance footage.  
@@ -14,7 +14,7 @@ The system is lightweight, fast, and optimized for **deployment on edge devices*
   Detects military and civilian targets from drone or UAV video feeds using YOLOv8.
 
 - ⚡ **Lightweight and Fast**  
-  Powered by `YOLOv11n`, suitable for edge devices with limited resources.
+  Powered by `YOLOv8`, suitable for edge devices with limited resources.
 
 - 🧠 **Domain-Specific Classification**  
   Trained to distinguish between civilian vs tactical vehicles and equipment.
@@ -33,7 +33,7 @@ The system is lightweight, fast, and optimized for **deployment on edge devices*
 ### 📊 Training Configuration
 | Parameter        | Value                    |
 |------------------|--------------------------|
-| Model            | YOLOv11n (nano)          |
+| Model            | YOLOv8                   |
 | Dataset Size     | 374 images               |
 | Optimizer        | SGD                      |
 | Epochs           | 40                       |
@@ -56,7 +56,7 @@ The system is lightweight, fast, and optimized for **deployment on edge devices*
 </p>
 
 >🧠 Detected classes: animal, civilian, civilian vehicle, military vehicle, soldier, weapon  
->🔎 Confidence threshold: 0.5 | 🧩 Model: my_model.pt (YOLOv11n) | 🎥 Source: Drone Footage, Dataset from COCO
+>🔎 Confidence threshold: 0.5 | 🧩 Model: my_model.pt (YOLOv8) | 🎥 Source: Drone Footage, Dataset from COCO
 
 ---
 

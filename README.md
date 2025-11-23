@@ -7,6 +7,11 @@ It is designed for **defense and security use cases**, providing real-time situa
 The system is lightweight, fast, and optimized for **deployment on edge devices** like drones, Raspberry Pi, and NVIDIA Jetson Nano.
 
 ---
+<p align="center">
+  <img src="sample_outputs/ui1.jpg" alt="User interface 1" width="450"/>
+  <img src="sample_outputs/ui2.jpg" alt="User interface 2" width="450"/>
+</p>
+
 
 ## 🔍 Key Features
 
@@ -31,13 +36,13 @@ The system is lightweight, fast, and optimized for **deployment on edge devices*
 ---
 
 ### 📊 Training Configuration
-| Parameter        | Value                    |
-|------------------|--------------------------|
-| Model            | YOLOv8                   |
-| Dataset Size     | 374 images               |
-| Optimizer        | SGD                      |
-| Epochs           | 40                       |
-| mAP@0.5          | ~80%                     |
+| **Parameter**       | **YOLOv8-L**     | **YOLOv8-M**     | **YOLOv11-M**    |
+|---------------------|------------------|------------------|------------------|
+| **Dataset Size**    | 1100 images      | 1500 images      | 4400 images      |
+| **Optimizer**       | SGD              | SGD              | SGD              |
+| **Epochs**          | 40               | 50               | 60               |
+| **mAP@0.5**         | 88.4%            | 81.2%            | 83.7%            |
+| **Model Type**      | v8l              | v8m              | v11m             |
 
 ---
 

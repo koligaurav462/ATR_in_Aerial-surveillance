@@ -5,6 +5,7 @@ import os
 from ultralytics import YOLO
 import tempfile
 from datetime import datetime
+import time
 
 # -----------------------------------------
 # Page Configuration
@@ -178,7 +179,7 @@ def draw_top_left_status(img, text, color):
     cv2.putText(img, text, (x_pos, y_pos), font, scale, color, thickness, cv2.LINE_AA)
     return img
 
-def process_frame(img, model_person, model_weapon):
+def process_frame(img, model_person, model_weapon, is_webcam=False):
     img_detection = img.copy()
     img_h, img_w = img.shape[:2]
     img_area = img_h * img_w
@@ -195,13 +196,11 @@ def process_frame(img, model_person, model_weapon):
         x1, y1, x2, y2 = box.xyxy[0].tolist()
         label = results_person.names[cls_id].lower()
 
-        # --- CONFIDENCE THRESHOLD FIX ---
-        # Apply 65% threshold rule for soldiers (both image and webcam)
+        # Strict 65% rule for soldiers (Global)
         if label in ["soldier", "solider"]:
             if conf < 0.65:
                 label = "civilian"
-        # --------------------------------
-
+        
         det = {"cls": label, "conf": conf, "box": [x1, y1, x2, y2]}
         detections.append(det)
 
@@ -280,9 +279,6 @@ def process_frame(img, model_person, model_weapon):
 SAFE_SOUND = "https://actions.google.com/sounds/v1/cartoon/pop.ogg"
 ALERT_SOUND = "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
 
-def play_sound(url):
-    st.markdown(f'<audio autoplay><source src="{url}" type="audio/ogg"></audio>', unsafe_allow_html=True)
-
 # -----------------------------------------
 # UI STRUCTURE
 # -----------------------------------------
@@ -292,6 +288,25 @@ st.markdown("""
     <p class="subtitle">Advanced Threat Assessment & Real-time Monitoring</p>
 </div>
 """, unsafe_allow_html=True)
+
+# --- GLOBAL SOUND CONTAINER (CRITICAL FIX) ---
+sound_output = st.empty()
+
+def play_sound(url):
+    """Forces audio playback by clearing and refilling the container."""
+    unique_id = datetime.now().timestamp()
+    # Force clear the container first to reset the DOM
+    sound_output.empty()
+    time.sleep(0.1) # Tiny pause to ensure browser sees the removal
+    with sound_output:
+        st.markdown(
+            f"""
+            <audio autoplay style="display:none;">
+                <source src="{url}?t={unique_id}" type="audio/ogg">
+            </audio>
+            """,
+            unsafe_allow_html=True
+        )
 
 st.markdown("""
 <div class="legend-container">
@@ -327,7 +342,7 @@ if mode == "📸 Upload Image":
             img = cv2.imread(image_path)
             
             with st.spinner("🔍 Analyzing image..."):
-                img_detection, is_suspicious, n_soldiers, n_civilians, n_weapons = process_frame(img, model_person, model_weapon)
+                img_detection, is_suspicious, n_soldiers, n_civilians, n_weapons = process_frame(img, model_person, model_weapon, is_webcam=False)
             
             status_text = "SUSPICIOUS ACTIVITY" if is_suspicious else "AREA SECURE"
             status_color = (0, 0, 255) if is_suspicious else (0, 255, 0)
@@ -340,6 +355,7 @@ if mode == "📸 Upload Image":
                 
             st.image(img_display, channels="BGR", use_container_width=True)
 
+            # FORCE PLAY SOUND ON UPLOAD
             if is_suspicious:
                 st.markdown('<div style="text-align: center;"><span class="status-badge status-alert">⚠️ SUSPICIOUS ACTIVITY</span></div>', unsafe_allow_html=True)
                 play_sound(ALERT_SOUND)
@@ -369,6 +385,10 @@ elif mode == "🎥 Live Webcam":
     video_placeholder = st.empty()
     status_placeholder = st.empty()
     
+    # State tracking for audio
+    if 'last_alert_state' not in st.session_state:
+        st.session_state.last_alert_state = None
+
     if 'run_webcam' not in st.session_state: st.session_state.run_webcam = False
     if start_button: st.session_state.run_webcam = True
     if stop_button: st.session_state.run_webcam = False
@@ -381,12 +401,23 @@ elif mode == "🎥 Live Webcam":
                 st.error("❌ Failed to capture video.")
                 break
             
-            img_detection, is_suspicious, n_soldiers, n_civilians, n_weapons = process_frame(frame, model_person, model_weapon)
+            img_detection, is_suspicious, n_soldiers, n_civilians, n_weapons = process_frame(frame, model_person, model_weapon, is_webcam=True)
             
             status_text = "SUSPICIOUS" if is_suspicious else "SECURE"
             status_color = (0, 0, 255) if is_suspicious else (0, 255, 0)
             
             img_detection = draw_top_left_status(img_detection, status_text, status_color)
+            
+            # --- AUDIO LOGIC (Plays only on state change) ---
+            current_state = "suspicious" if is_suspicious else "secure"
+            
+            if current_state != st.session_state.last_alert_state:
+                if is_suspicious:
+                    play_sound(ALERT_SOUND)
+                else:
+                    play_sound(SAFE_SOUND)
+                st.session_state.last_alert_state = current_state
+            # ------------------------------------------------
             
             stats_placeholder.markdown(f"""
             <div class="stats-grid">

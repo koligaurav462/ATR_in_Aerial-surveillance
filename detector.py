@@ -130,31 +130,28 @@ def compute_iou(boxA, boxB):
     boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
     return interArea / float(boxAArea + boxBArea - interArea)
 
-def unified_nms(detections, iou_thresh=0.3):
-    """
-    Unified NMS: Takes ALL detections (soldiers, civilians, weapons).
-    If any two boxes overlap significantly, keeps only the highest confidence one.
-    This prevents "Double Detection" (e.g. detecting the same person as both Soldier and Civilian).
-    """
-    if not detections:
-        return []
+def separate_nms(detections, iou_thresh=0.3):
+    if not detections: return []
+    people = [d for d in detections if d['cls'] in ['soldier', 'solider', 'civilian', 'civillian']]
+    weapons = [d for d in detections if d['cls'] not in ['soldier', 'solider', 'civilian', 'civillian']]
     
-    # Sort by confidence (highest first)
-    detections = sorted(detections, key=lambda x: x['conf'], reverse=True)
     final_dets = []
     
-    while detections:
-        # Take the most confident box
-        current = detections.pop(0)
+    # Filter People
+    people = sorted(people, key=lambda x: x['conf'], reverse=True)
+    while people:
+        current = people.pop(0)
         final_dets.append(current)
+        people = [d for d in people if compute_iou(current['box'], d['box']) < iou_thresh]
         
-        # Remove any other box that overlaps with this one, REGARDLESS of class
-        detections = [
-            det for det in detections 
-            if compute_iou(current['box'], det['box']) < iou_thresh
-        ]
+    # Filter Weapons
+    weapons = sorted(weapons, key=lambda x: x['conf'], reverse=True)
+    while weapons:
+        current = weapons.pop(0)
+        final_dets.append(current)
+        weapons = [d for d in weapons if compute_iou(current['box'], d['box']) < iou_thresh]
         
-    return final_dets
+    return final_dets + weapons
 
 def center(box):
     x1, y1, x2, y2 = box
@@ -183,10 +180,13 @@ def draw_top_left_status(img, text, color):
 
 def process_frame(img, model_person, model_weapon):
     img_detection = img.copy()
+    img_h, img_w = img.shape[:2]
+    img_area = img_h * img_w
+    
     results_person = model_person(img)[0]
     results_weapon = model_weapon(img)[0]
 
-    all_detections = []
+    detections = []
 
     # 1. Collect Person Detections
     for box in results_person.boxes:
@@ -195,32 +195,39 @@ def process_frame(img, model_person, model_weapon):
         x1, y1, x2, y2 = box.xyxy[0].tolist()
         label = results_person.names[cls_id].lower()
 
-        # --- FIX: STRICT SOLDIER GATE (80%) ---
-        # If the AI says "Soldier" but is less than 80% sure, FORCE it to be "Civilian".
+        # --- CONFIDENCE THRESHOLD FIX ---
+        # Apply 65% threshold rule for soldiers (both image and webcam)
         if label in ["soldier", "solider"]:
-            if conf < 0.80:  # <--- CHANGED FROM 0.60 TO 0.80
+            if conf < 0.65:
                 label = "civilian"
-        
+        # --------------------------------
+
         det = {"cls": label, "conf": conf, "box": [x1, y1, x2, y2]}
-        all_detections.append(det)
+        detections.append(det)
 
     # 2. Collect Weapon Detections
     for box in results_weapon.boxes:
         cls_id = int(box.cls[0])
         conf = float(box.conf[0])
         x1, y1, x2, y2 = box.xyxy[0].tolist()
+        
+        # Giant Filter: Ignore if > 30% of screen
+        box_w = x2 - x1
+        box_h = y2 - y1
+        if (box_w * box_h) > (img_area * 0.30):
+            continue
+
         label = results_weapon.names[cls_id].lower()
         det = {"cls": label, "conf": conf, "box": [x1, y1, x2, y2]}
-        all_detections.append(det)
+        detections.append(det)
 
-    # 3. UNIFIED NMS
-    # Feeds ALL detections into one filter to prevent box overlap.
-    all_detections = unified_nms(all_detections)
+    # 3. Apply Separated NMS
+    detections = separate_nms(detections)
     
-    # 4. Sort results back into lists for logic processing
-    soldiers = [d for d in all_detections if d["cls"] in ["soldier", "solider"]]
-    civilians = [d for d in all_detections if d["cls"] in ["civilian", "civillian"]]
-    weapons = [d for d in all_detections if d["cls"] not in ["soldier", "solider", "civilian", "civillian"]]
+    # 4. Sort results
+    soldiers = [d for d in detections if d["cls"] in ["soldier", "solider"]]
+    civilians = [d for d in detections if d["cls"] in ["civilian", "civillian"]]
+    weapons = [d for d in detections if d["cls"] not in ["soldier", "solider", "civilian", "civillian"]]
 
     suspicious = False
     
@@ -232,7 +239,7 @@ def process_frame(img, model_person, model_weapon):
 
         if in_soldier_box and not in_civilian_box:
             continue 
-
+            
         soldier_dist = float('inf')
         if soldiers:
             soldier_dist = min([distance(w_center, center(s["box"])) for s in soldiers])
@@ -242,30 +249,26 @@ def process_frame(img, model_person, model_weapon):
             c_dist = distance(w_center, center(closest_c["box"]))
             c_box = closest_c["box"]
             c_height = c_box[3] - c_box[1] 
-            holding_radius = c_height * 0.4
+            holding_radius = c_height * 0.6 
             
-            if c_dist < soldier_dist and c_dist < holding_radius:
+            if (not soldiers) or (c_dist < soldier_dist and c_dist < holding_radius):
                 suspicious = True
-                cv2.line(img_detection, 
-                         tuple(map(int, w_center)), 
-                         tuple(map(int, center(c_box))), 
-                         (0, 0, 255), 3)
                 break
-
+        
     # 6. Draw Bounding Boxes
-    for det in all_detections:
+    for det in detections:
         x1, y1, x2, y2 = map(int, det["box"])
         label = det["cls"]
         conf = det["conf"]
 
         if label in ["soldier", "solider"]:
-            color = (0, 255, 0) # Green
+            color = (0, 255, 0)
             display_label = "SOLDIER"
         elif label in ["civilian", "civillian"]:
-            color = (0, 255, 255) # Yellow
+            color = (0, 255, 255)
             display_label = "CIVILIAN"
         else:
-            color = (0, 0, 255) # Red
+            color = (0, 0, 255)
             display_label = label.upper()
 
         cv2.rectangle(img_detection, (x1, y1), (x2, y2), color, 3)

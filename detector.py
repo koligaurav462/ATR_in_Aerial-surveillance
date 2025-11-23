@@ -10,7 +10,7 @@ from datetime import datetime
 # Page Configuration
 # -----------------------------------------
 st.set_page_config(
-    page_title="AI Security System",
+    page_title="Automatic Target Recognition System",  # CHANGED HERE
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -426,7 +426,7 @@ def play_sound(url):
 # -----------------------------------------
 st.markdown("""
 <div class="header-container">
-    <h1 class="main-title">🛡️ AI Security Detection System</h1>
+    <h1 class="main-title">🛡️ Automatic Target Recognition System</h1>
     <p class="subtitle">Advanced Threat Assessment & Real-time Monitoring</p>
 </div>
 """, unsafe_allow_html=True)

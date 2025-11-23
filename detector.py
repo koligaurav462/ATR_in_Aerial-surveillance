@@ -342,6 +342,7 @@ if mode == "📸 Upload Image":
             img = cv2.imread(image_path)
             
             with st.spinner("🔍 Analyzing image..."):
+                # Use RAW detection for images (False)
                 img_detection, is_suspicious, n_soldiers, n_civilians, n_weapons = process_frame(img, model_person, model_weapon, is_webcam=False)
             
             status_text = "SUSPICIOUS ACTIVITY" if is_suspicious else "AREA SECURE"
@@ -363,15 +364,16 @@ if mode == "📸 Upload Image":
                 st.markdown('<div style="text-align: center;"><span class="status-badge status-safe">✓ AREA SECURE</span></div>', unsafe_allow_html=True)
                 play_sound(SAFE_SOUND)
         
-        st.markdown(f"""
-        <div class="stats-grid">
-            <div class="stat-card"><div class="stat-icon">🎖️</div><div class="stat-number">{n_soldiers}</div><div class="stat-label">Soldiers Detected</div></div>
-            <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">{n_civilians}</div><div class="stat-label">Civilians Detected</div></div>
-            <div class="stat-card"><div class="stat-icon">🔫</div><div class="stat-number">{n_weapons}</div><div class="stat-label">Weapons Detected</div></div>
-        </div>
-        """, unsafe_allow_html=True)
+        # REMOVED STATS GRID AND TIMESTAMP
+        # st.markdown(f"""
+        # <div class="stats-grid">
+        #     <div class="stat-card"><div class="stat-icon">🎖️</div><div class="stat-number">{n_soldiers}</div><div class="stat-label">Soldiers Detected</div></div>
+        #     <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">{n_civilians}</div><div class="stat-label">Civilians Detected</div></div>
+        #     <div class="stat-card"><div class="stat-icon">🔫</div><div class="stat-number">{n_weapons}</div><div class="stat-label">Weapons Detected</div></div>
+        # </div>
+        # """, unsafe_allow_html=True)
         
-        st.markdown(f'<p style="text-align: center; color: #a8b2d1; margin-top: 1rem;">⏰ Analysis completed at {datetime.now().strftime("%I:%M:%S %p")}</p>', unsafe_allow_html=True)
+        # st.markdown(f'<p style="text-align: center; color: #a8b2d1; margin-top: 1rem;">⏰ Analysis completed at {datetime.now().strftime("%I:%M:%S %p")}</p>', unsafe_allow_html=True)
 
 # =====================================================================
 # WEBCAM MODE
@@ -381,7 +383,8 @@ elif mode == "🎥 Live Webcam":
     with col1: start_button = st.button("▶️ Start Detection", use_container_width=True)
     with col2: stop_button = st.button("⏹️ Stop Detection", use_container_width=True)
     
-    stats_placeholder = st.empty()
+    # REMOVED STATS PLACEHOLDER
+    # stats_placeholder = st.empty()
     video_placeholder = st.empty()
     status_placeholder = st.empty()
     
@@ -419,13 +422,14 @@ elif mode == "🎥 Live Webcam":
                 st.session_state.last_alert_state = current_state
             # ------------------------------------------------
             
-            stats_placeholder.markdown(f"""
-            <div class="stats-grid">
-                <div class="stat-card"><div class="stat-icon">🎖️</div><div class="stat-number">{n_soldiers}</div><div class="stat-label">Soldiers</div></div>
-                <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">{n_civilians}</div><div class="stat-label">Civilians</div></div>
-                <div class="stat-card"><div class="stat-icon">🔫</div><div class="stat-number">{n_weapons}</div><div class="stat-label">Weapons</div></div>
-            </div>
-            """, unsafe_allow_html=True)
+            # REMOVED STATS GRID DISPLAY
+            # stats_placeholder.markdown(f"""
+            # <div class="stats-grid">
+            #     <div class="stat-card"><div class="stat-icon">🎖️</div><div class="stat-number">{n_soldiers}</div><div class="stat-label">Soldiers</div></div>
+            #     <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-number">{n_civilians}</div><div class="stat-label">Civilians</div></div>
+            #     <div class="stat-card"><div class="stat-icon">🔫</div><div class="stat-number">{n_weapons}</div><div class="stat-label">Weapons</div></div>
+            # </div>
+            # """, unsafe_allow_html=True)
             
             video_placeholder.image(img_detection, channels="BGR", use_container_width=True)
             
